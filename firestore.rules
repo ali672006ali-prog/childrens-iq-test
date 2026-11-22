@@ -1,0 +1,220 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isVerifiedUser() {
+      return isSignedIn() && request.auth.token.email_verified == true;
+    }
+
+    function isValidOptionalString(data, key, maxLen) {
+      return !(key in data) || (data[key] is string && data[key].size() <= maxLen);
+    }
+
+    function isValidExaminerSettings(data) {
+      return data.keys().hasAll(['ownerId', 'examinerName', 'institutionName', 'updatedAt'])
+        && data.keys().hasOnly([
+          'ownerId',
+          'examinerName',
+          'institutionName',
+          'universityLogo',
+          'specificEducationLogo',
+          'artsFacultyLogo',
+          'updatedAt'
+        ])
+        && isValidId(data.ownerId)
+        && data.ownerId == request.auth.uid
+        && data.examinerName is string && data.examinerName.size() <= 120
+        && data.institutionName is string && data.institutionName.size() <= 180
+        && isValidOptionalString(data, 'universityLogo', 250000)
+        && isValidOptionalString(data, 'specificEducationLogo', 250000)
+        && isValidOptionalString(data, 'artsFacultyLogo', 250000)
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidAssessment(data) {
+      return data.keys().hasAll([
+          'ownerId',
+          'childName',
+          'gender',
+          'testDate',
+          'chronologicalAgeMonths',
+          'visualRawScore',
+          'verbalRawScore',
+          'totalRawScore',
+          'mentalAgeMonths',
+          'iqScore',
+          'classificationAr',
+          'classificationEn',
+          'motorImpairedMode',
+          'status',
+          'createdAt',
+          'updatedAt'
+        ])
+        && data.keys().hasOnly([
+          'ownerId',
+          'childName',
+          'childCode',
+          'gender',
+          'schoolOrNursery',
+          'cityOrVillage',
+          'examinerName',
+          'birthDate',
+          'testDate',
+          'chronologicalAgeMonths',
+          'chronologicalAgeYears',
+          'chronologicalAgeRemMonths',
+          'visualRawScore',
+          'verbalRawScore',
+          'totalRawScore',
+          'mentalAgeMonths',
+          'iqScore',
+          'classificationAr',
+          'classificationEn',
+          'motorImpairedMode',
+          'clinicalNotes',
+          'visualResponses',
+          'verbalResponses',
+          'aiReport',
+          'status',
+          'createdAt',
+          'updatedAt'
+        ])
+        && isValidId(data.ownerId)
+        && data.childName is string && data.childName.size() >= 1 && data.childName.size() <= 120
+        && isValidOptionalString(data, 'childCode', 60)
+        && data.gender in ['male', 'female']
+        && isValidOptionalString(data, 'schoolOrNursery', 150)
+        && isValidOptionalString(data, 'cityOrVillage', 120)
+        && isValidOptionalString(data, 'examinerName', 120)
+        && isValidOptionalString(data, 'birthDate', 20)
+        && data.testDate is string && data.testDate.size() >= 1 && data.testDate.size() <= 20
+        && data.chronologicalAgeMonths is number && data.chronologicalAgeMonths >= 12 && data.chronologicalAgeMonths <= 240
+        && (!('chronologicalAgeYears' in data) || (data.chronologicalAgeYears is number && data.chronologicalAgeYears >= 1 && data.chronologicalAgeYears <= 20))
+        && (!('chronologicalAgeRemMonths' in data) || (data.chronologicalAgeRemMonths is number && data.chronologicalAgeRemMonths >= 0 && data.chronologicalAgeRemMonths <= 11))
+        && data.visualRawScore is number && data.visualRawScore >= 0 && data.visualRawScore <= 45
+        && data.verbalRawScore is number && data.verbalRawScore >= 0 && data.verbalRawScore <= 45
+        && data.totalRawScore is number && data.totalRawScore >= 0 && data.totalRawScore <= 90
+        && data.mentalAgeMonths is number && data.mentalAgeMonths >= 12 && data.mentalAgeMonths <= 240
+        && data.iqScore is number && data.iqScore >= 10 && data.iqScore <= 250
+        && data.classificationAr is string && data.classificationAr.size() >= 1 && data.classificationAr.size() <= 80
+        && data.classificationEn is string && data.classificationEn.size() >= 1 && data.classificationEn.size() <= 80
+        && data.motorImpairedMode is bool
+        && isValidOptionalString(data, 'clinicalNotes', 2000)
+        && (!('visualResponses' in data) || (data.visualResponses is map && data.visualResponses.size() <= 45))
+        && (!('verbalResponses' in data) || (data.verbalResponses is map && data.verbalResponses.size() <= 45))
+        && (!('aiReport' in data) || (data.aiReport is map && data.aiReport.size() <= 10))
+        && data.status in ['in_progress', 'completed']
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    match /admins/{adminUid} {
+      allow get: if isVerifiedUser() && isValidId(adminUid) && request.auth.uid == adminUid;
+      allow list, create, update, delete: if false;
+    }
+
+    match /examinerSettings/{userId} {
+      allow get: if isVerifiedUser() && isValidId(userId) && request.auth.uid == userId;
+      allow list: if false;
+      allow create: if isVerifiedUser()
+        && isValidId(userId)
+        && request.auth.uid == userId
+        && isValidExaminerSettings(incoming())
+        && incoming().updatedAt == request.time;
+      allow update: if isVerifiedUser()
+        && isValidId(userId)
+        && request.auth.uid == userId
+        && isValidExaminerSettings(incoming())
+        && incoming().ownerId == existing().ownerId
+        && incoming().updatedAt == request.time
+        && incoming().diff(existing()).affectedKeys().hasOnly([
+          'examinerName',
+          'institutionName',
+          'universityLogo',
+          'specificEducationLogo',
+          'artsFacultyLogo',
+          'updatedAt'
+        ]);
+      allow delete: if isVerifiedUser() && isValidId(userId) && request.auth.uid == userId;
+    }
+
+    match /assessments/{assessmentId} {
+      // Shared examiners database accessible via Examiner PIN gate (no Google Sign-In required)
+      allow get: if isValidId(assessmentId)
+        && (existing().status == 'completed' || existing().status == 'in_progress');
+      allow list: if resource.data.status == 'completed' || resource.data.status == 'in_progress';
+      allow create: if isValidId(assessmentId)
+        && isValidAssessment(incoming())
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time;
+      allow update: if isValidId(assessmentId)
+        && isValidAssessment(incoming())
+        && incoming().ownerId == existing().ownerId
+        && incoming().createdAt == existing().createdAt
+        && incoming().updatedAt == request.time
+        && (
+          (
+            existing().status != 'completed'
+            && incoming().diff(existing()).affectedKeys().hasOnly([
+              'childName',
+              'childCode',
+              'gender',
+              'schoolOrNursery',
+              'cityOrVillage',
+              'examinerName',
+              'birthDate',
+              'testDate',
+              'chronologicalAgeMonths',
+              'chronologicalAgeYears',
+              'chronologicalAgeRemMonths',
+              'visualRawScore',
+              'verbalRawScore',
+              'totalRawScore',
+              'mentalAgeMonths',
+              'iqScore',
+              'classificationAr',
+              'classificationEn',
+              'motorImpairedMode',
+              'clinicalNotes',
+              'visualResponses',
+              'verbalResponses',
+              'aiReport',
+              'status',
+              'updatedAt'
+            ])
+          )
+          ||
+          (
+            existing().status == 'completed'
+            && incoming().status == 'completed'
+            && incoming().diff(existing()).affectedKeys().hasOnly([
+              'clinicalNotes',
+              'aiReport',
+              'updatedAt'
+            ])
+          )
+        );
+      allow delete: if isValidId(assessmentId)
+        && (existing().status == 'completed' || existing().status == 'in_progress');
+    }
+  }
+}

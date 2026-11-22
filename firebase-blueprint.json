@@ -1,0 +1,208 @@
+{
+  "entities": {
+    "ExaminerSettings": {
+      "title": "Examiner Settings & Institutional Logos",
+      "description": "Stores examiner default profile metadata and uploaded institutional logos for Menoufia University, Faculty of Specific Education, and Faculty of Arts.",
+      "type": "object",
+      "properties": {
+        "ownerId": {
+          "type": "string",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$",
+          "description": "Firebase Auth UID of the examiner."
+        },
+        "examinerName": {
+          "type": "string",
+          "maxLength": 120,
+          "description": "Display name of the psychologist/examiner."
+        },
+        "institutionName": {
+          "type": "string",
+          "maxLength": 180,
+          "description": "University or clinic name."
+        },
+        "universityLogo": {
+          "type": "string",
+          "maxLength": 250000,
+          "description": "Compressed image data URL for Menoufia University logo."
+        },
+        "specificEducationLogo": {
+          "type": "string",
+          "maxLength": 250000,
+          "description": "Compressed image data URL for Faculty of Specific Education logo."
+        },
+        "artsFacultyLogo": {
+          "type": "string",
+          "maxLength": 250000,
+          "description": "Compressed image data URL for Faculty of Arts logo."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp of last update."
+        }
+      },
+      "required": ["ownerId", "examinerName", "institutionName", "updatedAt"]
+    },
+    "AssessmentSession": {
+      "title": "Children Intelligence Assessment Session",
+      "description": "Stores child demographic info, chronological age, raw item responses for visual and verbal subtests, IQ norms calculation, and bilingual AI diagnostic report.",
+      "type": "object",
+      "properties": {
+        "ownerId": {
+          "type": "string",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$",
+          "description": "Firebase Auth UID of the owning examiner."
+        },
+        "childName": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 120,
+          "description": "Child name or anonymized identifier."
+        },
+        "childCode": {
+          "type": "string",
+          "maxLength": 60,
+          "description": "Optional privacy case code."
+        },
+        "gender": {
+          "type": "string",
+          "enum": ["male", "female"],
+          "description": "Child gender."
+        },
+        "schoolOrNursery": {
+          "type": "string",
+          "maxLength": 150,
+          "description": "Nursery or primary school name."
+        },
+        "cityOrVillage": {
+          "type": "string",
+          "maxLength": 120,
+          "description": "City or village of residence."
+        },
+        "examinerName": {
+          "type": "string",
+          "maxLength": 120,
+          "description": "Name of the examiner administering the test."
+        },
+        "birthDate": {
+          "type": "string",
+          "maxLength": 20,
+          "description": "ISO date string of child's birth date (or manual label)."
+        },
+        "testDate": {
+          "type": "string",
+          "maxLength": 20,
+          "description": "ISO date string of test administration."
+        },
+        "chronologicalAgeMonths": {
+          "type": "number",
+          "description": "Total chronological age in months."
+        },
+        "chronologicalAgeYears": {
+          "type": "number",
+          "description": "Whole years component of chronological age."
+        },
+        "chronologicalAgeRemMonths": {
+          "type": "number",
+          "description": "Remaining months component of chronological age."
+        },
+        "visualRawScore": {
+          "type": "number",
+          "description": "Raw score on the 45-item visual subtest."
+        },
+        "verbalRawScore": {
+          "type": "number",
+          "description": "Raw score on the 45-item verbal subtest."
+        },
+        "totalRawScore": {
+          "type": "number",
+          "description": "Combined raw score out of 90."
+        },
+        "mentalAgeMonths": {
+          "type": "number",
+          "description": "Normative mental age in months from Table 2."
+        },
+        "iqScore": {
+          "type": "number",
+          "description": "Calculated IQ score = (Mental Age / Chronological Age) * 100."
+        },
+        "classificationAr": {
+          "type": "string",
+          "maxLength": 80,
+          "description": "Arabic verbal IQ classification."
+        },
+        "classificationEn": {
+          "type": "string",
+          "maxLength": 80,
+          "description": "English verbal IQ classification."
+        },
+        "motorImpairedMode": {
+          "type": "boolean",
+          "description": "Whether motor-impaired administration mode was used."
+        },
+        "clinicalNotes": {
+          "type": "string",
+          "maxLength": 2000,
+          "description": "Examiner behavioral observations and notes."
+        },
+        "visualResponses": {
+          "type": "object",
+          "description": "Map of visual item numbers (1-45) to response records."
+        },
+        "verbalResponses": {
+          "type": "object",
+          "description": "Map of verbal item numbers (1-45) to response records."
+        },
+        "aiReport": {
+          "type": "object",
+          "description": "Structured bilingual AI clinical report (ar and en)."
+        },
+        "status": {
+          "type": "string",
+          "enum": ["in_progress", "completed"],
+          "description": "Session completion status."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp of session creation."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp of last update."
+        }
+      },
+      "required": [
+        "ownerId",
+        "childName",
+        "gender",
+        "testDate",
+        "chronologicalAgeMonths",
+        "visualRawScore",
+        "verbalRawScore",
+        "totalRawScore",
+        "mentalAgeMonths",
+        "iqScore",
+        "classificationAr",
+        "classificationEn",
+        "motorImpairedMode",
+        "status",
+        "createdAt",
+        "updatedAt"
+      ]
+    }
+  },
+  "firestore": {
+    "/examinerSettings/{userId}": {
+      "schema": { "$ref": "#/entities/ExaminerSettings" },
+      "description": "Per-examiner uploaded institutional logos and default profile settings."
+    },
+    "/assessments/{assessmentId}": {
+      "schema": { "$ref": "#/entities/AssessmentSession" },
+      "description": "Shared clinical intelligence assessment records visible to all verified examiners, with immutable creator ownership."
+    }
+  }
+}
